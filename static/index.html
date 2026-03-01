@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpamGuard: Semantic Audio Threat Detection System</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                <i class="fa-solid fa-shield-halved"></i>
+                <h1>SpamGuard</h1>
+            </div>
+            <p>Real-Time Semantic Audio Threat Detection System</p>
+        </header>
+
+        <!-- Main Content Grid -->
+        <main class="main-grid">
+
+            <!-- Left Column: Upload & Controls -->
+            <section class="control-panel panel">
+                <h2><i class="fa-solid fa-file-audio"></i> Input Audio</h2>
+
+                <div class="upload-zone" id="drop-zone">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <p>Drag & drop audio file here or</p>
+                    <input type="file" id="audio-file" accept="audio/*" hidden>
+                    <button class="btn btn-primary" onclick="document.getElementById('audio-file').click()">Browse
+                        Files</button>
+                    <div id="file-name" class="file-name hidden"></div>
+                </div>
+
+                <div class="controls">
+                    <button id="start-btn" class="btn btn-success" disabled>
+                        <i class="fa-solid fa-play"></i> Start Pipeline
+                    </button>
+                    <button id="reset-btn" class="btn btn-secondary">
+                        <i class="fa-solid fa-rotate-right"></i> Reset
+                    </button>
+                </div>
+
+                <div class="status-box" id="global-status">
+                    Waiting for audio upload...
+                </div>
+
+                <!-- Final Verdict Box (Hidden initially) -->
+                <div id="verdict-box" class="verdict-box hidden">
+                    <h3 id="verdict-title">Processing...</h3>
+                    <div class="verdict-stats">
+                        <div class="stat">
+                            <span class="label">Total Segments</span>
+                            <span class="value" id="stat-total">-</span>
+                        </div>
+                        <div class="stat warning">
+                            <span class="label">Spam</span>
+                            <span class="value" id="stat-spam">-</span>
+                        </div>
+                        <div class="stat success">
+                            <span class="label">Ham</span>
+                            <span class="value" id="stat-ham">-</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Column: Live Pipeline Visualization -->
+            <section class="pipeline-panel panel">
+                <h2><i class="fa-solid fa-network-wired"></i> Live Pipeline</h2>
+
+                <!-- Streaming Flow Indicator -->
+                <div class="flow-indicator">
+                    <div class="flow-step" id="step-stream">
+                        <i class="fa-solid fa-music"></i>
+                        <span>Stream</span>
+                    </div>
+                    <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                    <div class="flow-step" id="step-vad">
+                        <i class="fa-solid fa-waveform"></i>
+                        <span>VAD Buffer</span>
+                    </div>
+                    <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                    <div class="flow-step" id="step-stt">
+                        <i class="fa-solid fa-language"></i>
+                        <span>STT (Groq)</span>
+                    </div>
+                    <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                    <div class="flow-step" id="step-ml">
+                        <i class="fa-solid fa-microchip"></i>
+                        <span>Classifier</span>
+                    </div>
+                </div>
+
+                <!-- Live Events Feed -->
+                <div class="log-container">
+                    <div class="log-header">
+                        <span>Event Log</span>
+                        <div class="pulse-indicator hidden" id="live-pulse"></div>
+                    </div>
+                    <div class="log-content" id="log-content">
+                        <!-- Log entries injected here via JS -->
+                    </div>
+                </div>
+
+                <!-- Segment Results Grid -->
+                <h3>Processed Segments</h3>
+                <div class="segments-grid" id="segments-grid">
+                    <!-- Segment cards injected here via JS -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>

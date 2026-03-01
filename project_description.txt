@@ -1,0 +1,41 @@
+
+
+PROJECT DESCRIPTION: REAL-TIME SEMANTIC AUDIO THREAT DETECTION SYSTEM
+
+1. OVERVIEW
+This project is an end-to-end, high-performance, CPU-optimized audio pipeline designed to ingest live or recorded phone calls, transcribe the speech, and classify the call as either Spam or Ham (Legitimate) in real-time. The system is specifically engineered to handle complex linguistic scenarios common in the Indian subcontinent, including native Tamil, English, and code-mixed Tanglish (Tamil written/spoken with English).
+
+2. CORE MODELS & ARCHITECTURE
+The pipeline operates on a modular, multi-stage machine learning architecture:
+
+A. Voice Activity Detection (VAD)
+- Model: Silero-VAD (v5)
+- Function: Filters out silence and background noise from the raw audio stream. It utilizes a dynamic speech accumulation buffer to aggregate contiguous speech chunks, ensuring the downstream transcription models receive complete contextual sentences rather than clipped fragments.
+
+B. Speech-to-Text (STT) Engine
+- Model: whisper-large-v3-turbo / faster-whisper base
+- Function: Converts raw audio signals into text. The system relies on advanced automatic speech recognition (ASR) to accurately capture native phonetic structures and scripts natively depending on the audio's language context.
+
+C. Sequence Classification Engine
+- Model: google/muril-base-cased (MuRIL)
+- Function: A BERT-based transformer explicitly pre-trained on Indian languages. It is fine-tuned locally for binary sequence classification (Spam vs. Ham).
+- Hybrid Boosting: The deep learning predictions are augmented by a weighted, heuristic keyword-boosting mechanism capable of recognizing English, Tanglish, and native Tamil script. This ensures highly localized, phone-specific spam patterns (e.g., bank fraud, lottery scams) trigger the correct classification threshold.
+
+3. TECHNOLOGY STACK
+
+Backend & Infrastructure:
+- Python
+- FastAPI: High-performance asynchronous API framework serving the application.
+- WebSockets: Enables full-duplex, real-time streaming of pipeline events, segment logs, and classification results from the backend to the client.
+- Uvicorn: ASGI web server implementation.
+
+Machine Learning & Audio Processing:
+- PyTorch: Core tensor computation and neural network execution.
+- Hugging Face Transformers: Model deployment, tokenization, and pipeline execution for the classification model.
+- CTranslate2: Provides optimized, int8-quantized execution for local/offline STT deployment.
+- FFmpeg / soundfile: Handles diverse audio codec conversions, enforcing 16kHz mono WAV formatting for the ML models.
+- NumPy: High-speed matrix operations and audio buffer manipulation.
+
+Frontend Visualizer UI:
+- Vanilla HTML5 / CSS3 / JavaScript: A lightweight, responsive single-page visualizer.
+- Architecture: Employs CSS Grid for layout, dynamic DOM manipulation for real-time segment rendering, and WebSocket event listeners to trace the pipeline flow across Stream -> VAD -> STT -> Classifier nodes.

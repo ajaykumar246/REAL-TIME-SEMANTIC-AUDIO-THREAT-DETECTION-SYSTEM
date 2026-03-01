@@ -1,32 +1,38 @@
 """
-Feature 6: Pipeline Orchestration & Terminal Logging
+Feature 6: Pipeline Orchestration & Logging
 
 Ties all modules together in an async execution loop:
-  Stream → VAD → STT → Role Manager → Classifier (Transmitter only)
+  Stream → VAD → STT → Classifier → Log
 
 Usage:
     python pipeline.py <path_to.wav>
 """
 
 import asyncio
+import os
 import sys
 from datetime import datetime
 
 from stream_simulator import stream_audio_chunks
 from vad_filter import VADFilter
-from stt_engine import STTEngine
-from speaker_role_manager import SpeakerRoleManager
-from onnx_classifier import ONNXClassifier
+from stt_engine import create_stt_engine
+from classifier import ONNXClassifier as MLClassifier
+
+# Log file path
+LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pipeline_output.log")
 
 
-def log_entry(role: str, speaker_id: str, classification: str, text: str):
-    """Print a formatted log line to the terminal."""
+def log_entry(segment_num: int, classification: str, confidence: float,
+              text: str, log_lines: list):
+    """Print and store a formatted log line."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(
-        f"[{timestamp}] | {role}/{speaker_id} | "
-        f"Classification: {classification} | "
+    line = (
+        f"[{timestamp}] | Segment {segment_num} | "
+        f"{classification} ({confidence:.0%}) | "
         f"Text: {text}"
     )
+    print(line)
+    log_lines.append(line)
 
 
 async def run_pipeline(
@@ -37,8 +43,10 @@ async def run_pipeline(
     Main async pipeline loop.
 
     Flow:
-        stream_audio_chunks → VADFilter → STTEngine
-        → SpeakerRoleManager → ONNXClassifier (Transmitter only)
+        stream_audio_chunks → VADFilter (accumulate) → STT → Classifier
+
+    Every transcribed segment is classified directly — no speaker
+    role filtering, since accumulated segments contain mixed speakers.
 
     Parameters
     ----------
@@ -56,9 +64,8 @@ async def run_pipeline(
 
     # 1. Initialise all modules
     vad = VADFilter()
-    stt = STTEngine()
-    role_manager = SpeakerRoleManager()
-    classifier = ONNXClassifier()
+    stt = create_stt_engine()
+    classifier = MLClassifier()
 
     # Pre-load models
     print("\n[Pipeline] Loading models ...")
@@ -69,65 +76,84 @@ async def run_pipeline(
         classifier_available = True
     except FileNotFoundError as e:
         print(f"[Pipeline] WARNING: {e}")
-        print("[Pipeline] Classifier disabled — will log 'N/A' for classification.")
+        print("[Pipeline] Classifier disabled — will log 'N/A'.")
         classifier_available = False
 
     print("\n[Pipeline] Starting processing ...\n")
     print("-" * 70)
 
-    # 2. Chain: Stream → VAD → STT
+    # 2. Chain: Stream → VAD (accumulate) → STT → Classify
     audio_stream = stream_audio_chunks(
         wav_path, simulate_realtime=simulate_realtime
     )
     vad_stream = vad.filter_chunks(audio_stream)
 
-    # Simple heuristic speaker tracking:
-    # Alternate between Speaker 0 and Speaker 1 on each transcription.
-    # In a real system, this would come from a diarization model.
-    turn_idx = 0
+    segment_num = 0
     total_spam = 0
     total_ham = 0
-    total_skipped = 0
+    all_texts = []
+    log_lines = []
 
     async for result in stt.transcribe_stream(vad_stream):
         text = result.text.strip()
         if not text:
             continue
 
-        # Assign speaker (simple alternation heuristic)
-        speaker_id = f"Speaker {turn_idx % 2}"
-        turn_idx += 1
+        segment_num += 1
+        all_texts.append(text)
 
-        # Pass to role manager
-        role_info = role_manager.assign_role(speaker_id, text)
-        role = role_info["role"]
-        is_transmitter = role_info["is_transmitter"]
-
-        # Classify ONLY if speaker is the Transmitter
-        if is_transmitter and classifier_available:
+        # Classify every segment
+        if classifier_available:
             cls_result = classifier.classify(text)
-            classification = f"{cls_result['label']} ({cls_result['confidence']:.0%})"
-            if cls_result["label"] == "Spam":
+            label = cls_result["label"]
+            confidence = cls_result["confidence"]
+
+            if label == "Spam":
                 total_spam += 1
             else:
                 total_ham += 1
-        elif not classifier_available:
-            classification = "N/A (no model)"
-            total_skipped += 1
+
+            log_entry(segment_num, label, confidence, text, log_lines)
         else:
-            classification = "Skipped (Receiver)"
-            total_skipped += 1
+            log_entry(segment_num, "N/A", 0.0, text, log_lines)
 
-        log_entry(role, speaker_id, classification, text)
-
-    # 3. Summary
+    # 3. Overall call verdict
     print("-" * 70)
-    print(f"\n[Pipeline] Processing complete!")
-    print(f"  Total turns    : {turn_idx}")
-    print(f"  Spam detected  : {total_spam}")
-    print(f"  Ham detected   : {total_ham}")
-    print(f"  Skipped        : {total_skipped}")
-    print(f"\n  Speaker Summary: {role_manager.get_summary()}")
+
+    # If ANY segment is spam, the call is spam
+    if total_spam > 0:
+        call_verdict = "🚨 SPAM CALL DETECTED"
+    elif total_ham > 0:
+        call_verdict = "✅ Legitimate Call (Ham)"
+    else:
+        call_verdict = "⚠️ No speech classified"
+
+    print(f"\n{'=' * 70}")
+    print(f"  RESULT: {call_verdict}")
+    print(f"{'=' * 70}")
+    print(f"  Total segments : {segment_num}")
+    print(f"  Spam segments  : {total_spam}")
+    print(f"  Ham segments   : {total_ham}")
+    print(f"{'=' * 70}")
+
+    # 4. Write full log to file
+    with open(LOG_FILE, "w", encoding="utf-8") as f:
+        f.write(f"Pipeline Log — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"Input: {wav_path}\n")
+        f.write(f"Result: {call_verdict}\n")
+        f.write(f"Segments: {segment_num} (Spam: {total_spam}, Ham: {total_ham})\n")
+        f.write("=" * 70 + "\n\n")
+
+        for line in log_lines:
+            f.write(line + "\n")
+
+        f.write("\n" + "=" * 70 + "\n")
+        f.write("FULL TRANSCRIPTION:\n")
+        f.write("=" * 70 + "\n")
+        for i, text in enumerate(all_texts, 1):
+            f.write(f"\n[Segment {i}]\n{text}\n")
+
+    print(f"\n  Full log saved: {LOG_FILE}")
 
 
 def main():

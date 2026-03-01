@@ -7,16 +7,13 @@ build/
 *.egg
 
 # Virtual environments
-venv/
+.venv/
 .env/
 
 # Model files (large)
 fine_tuned_model/
-model.onnx
-model_quantized.onnx
 
-# Data
-data/
+
 
 # IDE
 .vscode/
