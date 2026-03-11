@@ -32,7 +32,7 @@ VAD_THRESHOLD = 0.5           # speech probability threshold
 STT_MODE = "api"
 
 # --- Groq API (used when STT_MODE = "api") ---
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "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")  # set via env or paste here
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")  # set via env or paste here
 GROQ_MODEL = "whisper-large-v3-turbo"               # best speed/accuracy
 
 # --- Faster-Whisper local (used when STT_MODE = "local") ---
