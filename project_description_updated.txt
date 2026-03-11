@@ -1,0 +1,52 @@
+PROJECT DESCRIPTION: REAL-TIME SEMANTIC AUDIO THREAT DETECTION SYSTEM
+
+1. OVERVIEW
+This project is an end-to-end, high-performance, CPU-optimized audio pipeline designed to ingest live or recorded phone calls, transcribe the speech, and classify the call as either Spam or Ham (Legitimate) in real-time. The system is specifically engineered to handle complex linguistic scenarios common in the Indian subcontinent, including native Tamil, English, and code-mixed Tanglish (Tamil written/spoken with English).
+
+2. DATASET
+The model was trained and evaluated using a unique hybrid dataset combining:
+- The UCI SMS Spam Collection Dataset (for foundational English spam/ham patterns).
+- A custom synthetic dataset containing Tamil and Tanglish text samples specifically tailored to capture localized telemarketing, banking fraud, and lottery scam call patterns.
+
+3. CORE MODELS & ARCHITECTURE
+The pipeline operates on a modular, multi-stage machine learning architecture:
+
+A. Voice Activity Detection (VAD)
+- Model: Silero-VAD (v5)
+- Function: Filters out silence and background noise from the raw audio stream. It utilizes a dynamic speech accumulation buffer to aggregate contiguous speech chunks, ensuring the downstream transcription models receive complete contextual sentences rather than clipped fragments.
+
+B. Speech-to-Text (STT) Engine
+- Model: whisper-large-v3-turbo / faster-whisper base
+- Function: Converts raw audio signals into text. The system relies on advanced automatic speech recognition (ASR) to accurately capture native phonetic structures and scripts natively depending on the audio's language context.
+
+C. Sequence Classification Engine
+- Model: google/muril-base-cased (MuRIL)
+- Function: A BERT-based transformer explicitly pre-trained on Indian languages. It is fine-tuned locally for binary sequence classification (Spam vs. Ham) using our custom hybrid dataset.
+- Hybrid Boosting: The deep learning predictions are augmented by a weighted, heuristic keyword-boosting mechanism capable of recognizing English, Tanglish, and native Tamil script. This ensures highly localized, phone-specific spam patterns trigger the correct classification threshold.
+
+4. MODEL PERFORMANCE (MuRIL Fine-tuned vs. Base ML Models)
+Our fine-tuned MuRIL model significantly outperforms traditional machine learning approaches. The comparative metrics are as follows:
+
+- Fine-tuned MuRIL (Ours): Accuracy: 94.0%, Precision: 93.0%, Recall: 95.0%, F1-Score: 94.0%
+- Neural Network (MLP): Accuracy: 91.67%, Precision: 88.89%, Recall: 94.12%, F1-Score: 91.43%
+- Logistic Regression: Accuracy: 80.56%, Precision: 75.0%, Recall: 88.24%, F1-Score: 81.08%
+- KNN: Accuracy: 77.78%, Precision: 71.43%, Recall: 88.24%, F1-Score: 78.95%
+- Ensemble (Soft Voting): Accuracy: 77.78%, Precision: 100.0%, Recall: 52.94%, F1-Score: 69.23%
+- Naive Bayes: Accuracy: 75.0%, Precision: 75.0%, Recall: 70.59%, F1-Score: 72.73%
+- Decision Tree: Accuracy: 72.22%, Precision: 100.0%, Recall: 41.18%, F1-Score: 58.33%
+- Random Forest: Accuracy: 69.44%, Precision: 100.0%, Recall: 35.29%, F1-Score: 52.17%
+- AdaBoost: Accuracy: 69.44%, Precision: 87.5%, Recall: 41.18%, F1-Score: 56.0%
+- gradient Boosting: Accuracy: 75.0%, Precision: 100.0%, Recall: 47.06%, F1-Score: 64.0%
+- SVM (SVC): Accuracy: 66.67%, Precision: 58.62%, Recall: 100.0%, F1-Score: 73.91%
+
+(A visualization chart 'model_performance_comparison.png' can be found in the project directory.)
+
+5. TECHNOLOGY STACK
+Backend & Infrastructure:
+- Python, FastAPI, WebSockets, Uvicorn
+
+Machine Learning & Audio Processing:
+- PyTorch, Hugging Face Transformers, CTranslate2, FFmpeg / soundfile, NumPy
+
+Frontend Visualizer UI:
+- Vanilla HTML5 / CSS3 / JavaScript

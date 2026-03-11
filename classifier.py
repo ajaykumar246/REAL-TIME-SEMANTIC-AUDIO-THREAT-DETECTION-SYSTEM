@@ -77,7 +77,7 @@ SPAM_KEYWORD_WEIGHTS = {
 }
 
 # Minimum keyword boost to flip from Ham to Spam
-KEYWORD_BOOST_THRESHOLD = 0.3
+KEYWORD_BOOST_THRESHOLD = 0.2
 
 
 class ONNXClassifier:
@@ -160,7 +160,7 @@ class ONNXClassifier:
             count = text_lower.count(keyword)
             if count > 0:
                 # Diminishing returns: first match = full weight, extras = half
-                boost += weight + (count - 1) * weight * 0.3
+                boost += weight + (count - 1) * weight * 0.2
                 matched.append(f"{keyword}(×{count})" if count > 1 else keyword)
 
         # Cap at 0.95 to avoid 100% certainty from keywords alone
